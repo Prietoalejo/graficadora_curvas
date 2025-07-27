@@ -1,0 +1,16 @@
+# Ignorar la carpeta del entorno virtual
+env/
+venv/
+
+# Ignorar archivos de cach� de Python
+__pycache__/
+*.pyc
+*.pyd
+.Python/
+
+# Ignorar archivos de configuraci�n del editor (ej. VS Code)
+.vscode/
+
+# Ignorar archivos generados
+*.gif
+*.log
