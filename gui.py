@@ -50,13 +50,18 @@ class MainWindow(QMainWindow):
         self.speed_combo.setCurrentIndex(1)
         control_layout.addWidget(self.speed_combo, 3, 1)
 
-        # Fila 4: Botón de Graficar / Animar y Detener animación
-        self.animate_button = QPushButton("Graficar / Animar")
+        # Fila 4: Botón de Graficar y Animar
+        self.plot_button = QPushButton("Graficar")
+        self.plot_button.clicked.connect(self.on_plot_button_clicked)
+        self.animate_button = QPushButton("Animar")
         self.animate_button.clicked.connect(self.on_animate_button_clicked)
+        control_layout.addWidget(self.plot_button, 4, 0)
+        control_layout.addWidget(self.animate_button, 4, 1)
+
+        # Fila 5: Botón de Detener animación
         self.stop_button = QPushButton("Detener animación")
         self.stop_button.clicked.connect(self.on_stop_button_clicked)
-        control_layout.addWidget(self.animate_button, 4, 0)
-        control_layout.addWidget(self.stop_button, 4, 1)
+        control_layout.addWidget(self.stop_button, 5, 0, 1, 2)
 
         # Asignar el layout al group box
         self.controls_group_box.setLayout(control_layout)
@@ -72,6 +77,18 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.controls_group_box)
         self.main_layout.addWidget(self.plotter, stretch=1)
         # No es necesario addStretch si el plotter tiene stretch
+    def on_plot_button_clicked(self):
+        func_str = self.function_input.text()
+        n_value = self.n_value_input.value()
+        parsed_func, error_message = parse_function(func_str)
+        if parsed_func:
+            try:
+                self.plotter.draw_single_curve(parsed_func, n_value)
+            except Exception as e:
+                print(f"Error al graficar estáticamente: {e}")
+        else:
+            print(f"Error de parseo: {error_message}")
+
 
     def on_stop_button_clicked(self):
         self.plotter.stop_animation()
