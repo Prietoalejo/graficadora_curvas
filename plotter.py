@@ -35,14 +35,12 @@ class AnimationWorker(QObject):
 # Clase principal para graficar curvas
 class CurvePlotter(QWidget):
     def stop_animation(self):
-        if hasattr(self, 'worker') and self.worker:
-            self.worker.stop()
-            self.worker = None
-        if hasattr(self, 'worker_thread') and self.worker_thread:
-            self.worker_thread.quit()
-            self.worker_thread.wait()
-            self.worker_thread = None
-        self.animation = None
+        if hasattr(self, 'animation') and self.animation:
+            try:
+                self.animation.event_source.stop()
+            except Exception:
+                pass
+            self.animation = None
     def __init__(self, parent=None):
         super().__init__(parent)
         self.figure = plt.Figure()
@@ -76,12 +74,15 @@ class CurvePlotter(QWidget):
         """
         # Limpiar los ejes antes de dibujar una nueva curva
         self.ax.clear()
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
-        self.ax.grid(True)
+        self.ax.set_xlabel(f"X  [{self.x_min}, {self.x_max}]")
+        self.ax.set_ylabel(f"Y  [{self.y_min}, {self.y_max}]")
+        self.ax.grid(True, which='both', color='gray', linestyle='--', linewidth=0.7, alpha=0.5)
         self.ax.set_xlim(self.x_min, self.x_max)
         self.ax.set_ylim(self.y_min, self.y_max)
         self.ax.set_aspect('equal', adjustable='box') # Mantener aspecto igual
+        # Mostrar los valores de los ticks en los ejes
+        self.ax.xaxis.set_major_locator(plt.MaxNLocator(10))
+        self.ax.yaxis.set_major_locator(plt.MaxNLocator(10))
 
         # Crear malla de puntos
         x = np.linspace(self.x_min, self.x_max, 400) # 400 puntos en X
@@ -98,7 +99,7 @@ class CurvePlotter(QWidget):
             # Para una única línea, 'levels=[n_value]' es la clave.
             self.ax.contour(X, Y, Z, levels=[n_value], colors='blue') # Dibujar la curva
 
-            self.ax.set_title(f"Curva de Nivel: N = {n_value:.2f}")
+            self.ax.set_title(f"Curva de Nivel: N = {n_value:.2f} | X:[{self.x_min},{self.x_max}] Y:[{self.y_min},{self.y_max}]")
 
         except Exception as e:
             # Manejar errores durante la evaluación o graficado
@@ -113,9 +114,9 @@ class CurvePlotter(QWidget):
     def animate_curves(self, func_callable, n_value, leave_trace, interval):
         import matplotlib.animation as animation
         self.ax.clear()
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
-        self.ax.grid(True)
+        self.ax.set_xlabel(f"X  [{self.x_min}, {self.x_max}]")
+        self.ax.set_ylabel(f"Y  [{self.y_min}, {self.y_max}]")
+        self.ax.grid(True, which='both', color='gray', linestyle='--', linewidth=0.7, alpha=0.5)
         self.ax.set_xlim(self.x_min, self.x_max)
         self.ax.set_ylim(self.y_min, self.y_max)
         self.ax.set_aspect('equal', adjustable='box')
@@ -124,33 +125,65 @@ class CurvePlotter(QWidget):
         y = np.linspace(self.y_min, self.y_max, 400)
         X, Y = np.meshgrid(x, y)
 
-        n_start = -abs(n_value)
-        n_end = abs(n_value)
-        num_frames = 50
-        n_values = np.linspace(n_start, n_end, num_frames)
+        # Definir rango de N: de 0 a n_value, luego de n_value a -n_value, ida y vuelta
+        num_frames = 20  # Menos frames para mayor separación
+        n_max = abs(n_value)
+        n_min = -abs(n_value)
+        # Usar un paso mayor para N
+        step = (n_max - n_min) / num_frames if num_frames > 0 else 1
+        n_values_forward = np.arange(0, n_max + step, step)
+        n_values_backward = np.arange(n_max, n_min - step, -step)
+        n_values_return = np.arange(n_min, 0 + step, step)
+        n_values = np.concatenate([n_values_forward, n_values_backward, n_values_return])
+
+        # Filtrar valores de N donde sí existe curva (no da error al graficar)
+
+        valid_n_values = []
+        seen = set()
+        for n in n_values:
+            n_rounded = round(n, 3)  # Redondear para evitar duplicados por precisión
+            if n_rounded in seen:
+                continue
+            try:
+                Z = func_callable(X, Y)
+                cs = self.ax.contour(X, Y, Z, levels=[n])
+                if len(cs.allsegs[0]) > 0:
+                    valid_n_values.append(n_rounded)
+                    seen.add(n_rounded)
+                plt.close(cs.figure)
+            except Exception:
+                continue
+        valid_n_values = sorted(valid_n_values)
+        # Generar ciclo completo: origen -> max -> min -> origen
+        if 0 not in valid_n_values:
+            valid_n_values.append(0)
+        valid_n_values = sorted(set(valid_n_values))
+        ciclo = valid_n_values + valid_n_values[::-1][1:]  # ida y vuelta, sin repetir el origen
+        self.ax.clear()
 
         def update(frame):
-            if not leave_trace:
-                self.ax.clear()
-                self.ax.set_xlabel("X")
-                self.ax.set_ylabel("Y")
-                self.ax.grid(True)
-                self.ax.set_xlim(self.x_min, self.x_max)
-                self.ax.set_ylim(self.y_min, self.y_max)
-                self.ax.set_aspect('equal', adjustable='box')
+            if frame >= len(ciclo):
+                return
+            self.ax.clear()
+            n_actual = ciclo[frame]
             try:
                 Z = func_callable(X, Y)
                 if leave_trace:
-                    for i in range(frame + 1):
-                        self.ax.contour(X, Y, Z, levels=[n_values[i]], colors='blue', alpha=0.5)
+                    # Dibujar todas las curvas anteriores con color tenue
+                    levels_rastro = sorted(set(ciclo[:frame]))
+                    if levels_rastro:
+                        self.ax.contour(X, Y, Z, levels=levels_rastro, colors='blue', alpha=0.3, linewidths=1)
+                    # Dibujar la curva actual con color normal
+                    self.ax.contour(X, Y, Z, levels=[n_actual], colors='blue', alpha=1.0, linewidths=2)
+                    self.ax.set_title(f"Animación Curva de Nivel: N = {n_actual:.2f}")
                 else:
-                    self.ax.contour(X, Y, Z, levels=[n_values[frame]], colors='blue')
-                self.ax.set_title(f"Animación Curva de Nivel: N = {n_values[frame]:.2f}")
-            except Exception as e:
-                self.ax.text(0.5, 0.5, f"Error al graficar:\n{e}",
+                    self.ax.contour(X, Y, Z, levels=[n_actual], colors='blue', alpha=1.0, linewidths=2)
+                    self.ax.set_title(f"Animación Curva de Nivel: N = {n_actual:.2f}")
+            except Exception:
+                self.ax.text(0.5, 0.5, f"No existe curva para N = {n_actual:.2f}",
                              horizontalalignment='center', verticalalignment='center',
                              transform=self.ax.transAxes, color='red', fontsize=12)
             self.canvas.draw()
 
-        self.animation = animation.FuncAnimation(self.figure, update, frames=num_frames, interval=interval, repeat=False)
+        self.animation = animation.FuncAnimation(self.figure, update, frames=len(ciclo), interval=interval, repeat=False)
         self.canvas.draw()

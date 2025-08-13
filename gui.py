@@ -20,6 +20,51 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
 
+    # ...existing code...
+
+    def on_plot_button_clicked(self):
+        func_str = self.function_input.text()
+        n_value = self.n_value_input.value()
+        parsed_func, error_message = parse_function(func_str)
+        if parsed_func:
+            try:
+                self.plotter.draw_single_curve(parsed_func, n_value)
+            except Exception as e:
+                QMessageBox.critical(self, "Error al graficar", f"Error: {e}")
+        else:
+            QMessageBox.critical(self, "Error de parseo", error_message)
+
+    def on_animate_button_clicked(self):
+        func_str = self.function_input.text()
+        n_value = self.n_value_input.value()
+        trace_enabled = self.leave_trace_checkbox.isChecked()
+        speed_str = self.speed_combo.currentText()
+        speed_map = {"x0.5": 200, "x1": 100, "x1.5": 66, "x2": 50}
+        interval = speed_map.get(speed_str, 100)
+        parsed_func, error_message = parse_function(func_str)
+        if parsed_func:
+            try:
+                self.plotter.animate_curves(parsed_func, n_value, trace_enabled, interval)
+            except Exception as e:
+                QMessageBox.critical(self, "Error de animación", f"Error: {e}")
+        else:
+            QMessageBox.critical(self, "Error de parseo", error_message)
+
+    def on_stop_button_clicked(self):
+        self.plotter.stop_animation()
+
+    def on_export_gif_button_clicked(self):
+        import os
+        desktop_path = os.path.expanduser('~/Desktop/curva_animada.gif')
+        if hasattr(self.plotter, 'animation') and self.plotter.animation:
+            try:
+                self.plotter.animation.save(desktop_path, writer='pillow')
+                QMessageBox.information(self, "Exportar GIF", f"La animación se ha guardado en el escritorio como curva_animada.gif")
+            except Exception as e:
+                QMessageBox.critical(self, "Error al exportar GIF", f"No se pudo guardar el GIF: {e}")
+        else:
+            QMessageBox.warning(self, "Exportar GIF", "No hay animación activa para exportar.")
+
     def init_ui(self):
         self.controls_group_box = QGroupBox("Define tu Curva de Nivel")
         control_layout = QGridLayout()
@@ -58,10 +103,13 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(self.plot_button, 4, 0)
         control_layout.addWidget(self.animate_button, 4, 1)
 
-        # Fila 5: Botón de Detener animación
+        # Fila 5: Botón de Detener animación y Exportar GIF
         self.stop_button = QPushButton("Detener animación")
         self.stop_button.clicked.connect(self.on_stop_button_clicked)
-        control_layout.addWidget(self.stop_button, 5, 0, 1, 2)
+        self.export_gif_button = QPushButton("Exportar GIF")
+        self.export_gif_button.clicked.connect(self.on_export_gif_button_clicked)
+        control_layout.addWidget(self.stop_button, 5, 0)
+        control_layout.addWidget(self.export_gif_button, 5, 1)
 
         # Asignar el layout al group box
         self.controls_group_box.setLayout(control_layout)
@@ -77,46 +125,4 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.controls_group_box)
         self.main_layout.addWidget(self.plotter, stretch=1)
         # No es necesario addStretch si el plotter tiene stretch
-    def on_plot_button_clicked(self):
-        func_str = self.function_input.text()
-        n_value = self.n_value_input.value()
-        parsed_func, error_message = parse_function(func_str)
-        if parsed_func:
-            try:
-                self.plotter.draw_single_curve(parsed_func, n_value)
-            except Exception as e:
-                print(f"Error al graficar estáticamente: {e}")
-        else:
-            print(f"Error de parseo: {error_message}")
-
-
-    def on_stop_button_clicked(self):
-        self.plotter.stop_animation()
-
-    def on_animate_button_clicked(self):
-        print("--- Botón 'Graficar / Animar' clickeado ---")
-        func_str = self.function_input.text()
-        n_value = self.n_value_input.value()
-        trace_enabled = self.leave_trace_checkbox.isChecked()
-        speed_str = self.speed_combo.currentText()
-        speed_map = {"x0.5": 200, "x1": 100, "x1.5": 66, "x2": 50}
-        interval = speed_map.get(speed_str, 100)
-
-        print(f"Función ingresada: {func_str}")
-        print(f"Valor constante de N: {n_value}")
-        print(f"Mantener rastro: {'Sí' if trace_enabled else 'No'}")
-        print(f"Velocidad animación: {speed_str} ({interval} ms por frame)")
-
-        # --- Lógica de parseo de la función ---
-        parsed_func, error_message = parse_function(func_str)
-
-        if parsed_func:
-            print("Función parseada correctamente. ¡Graficando curva estática!")
-            try:
-                # Animar la curva de nivel con los parámetros
-                self.plotter.animate_curves(parsed_func, n_value, trace_enabled, interval)
-
-            except Exception as e:
-                print(f"Error al intentar graficar: {e}")
-                QMessageBox.critical(self, "Error de Graficado", f"Ocurrió un error al intentar dibujar la curva: {e}")
-
+        # ...existing code...
