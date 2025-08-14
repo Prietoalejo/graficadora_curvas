@@ -1,4 +1,9 @@
-# function_parser.py
+"""
+Módulo para parsear funciones matemáticas de forma segura.
+Permite al usuario ingresar expresiones como f(x, y) y las convierte en funciones evaluables con NumPy.
+Incluye validaciones para evitar el uso de funciones peligrosas y solo permite operaciones matemáticas estándar.
+"""
+
 import numpy as np
 
 # Diccionario seguro de funciones matemáticas permitidas
@@ -31,15 +36,14 @@ SAFE_MATH_FUNCTIONS = {
 
 def parse_function(func_str):
     """
-    Parsea una cadena de texto de función f(x, y) de forma segura.
+    Recibe una cadena de texto que representa una función matemática f(x, y) y la convierte en una función evaluable con NumPy.
+    Solo permite el uso de variables x, y y funciones matemáticas seguras. Si la expresión es válida, devuelve una función lista para usar; si no, devuelve un mensaje de error explicativo.
 
     Args:
-        func_str (str): La cadena de la función (ej. "x**2 + y**2", "np.sin(x) + np.cos(y)").
+        func_str (str): Cadena de la función, por ejemplo "x**2 + y**2" o "np.sin(x) + np.cos(y)".
 
     Returns:
-        tuple: Una tupla (callable_func, error_message).
-               callable_func es una función que acepta (x, y) arrays de NumPy.
-               error_message es None si no hay error, o una cadena con el error.
+        tuple: (función evaluable, mensaje de error). Si todo está bien, el error es None.
     """
     # Preparar el entorno de ejecución para eval()
     # Solo permitimos 'x', 'y' y las funciones seguras de numpy
@@ -80,7 +84,7 @@ def parse_function(func_str):
         return None, f"Error al parsear la función: {e}"
 
 if __name__ == "__main__":
-    # Ejemplos de prueba para function_parser.py
+    # Ejemplos de uso y pruebas para el parser de funciones
     print("--- Pruebas de function_parser.py ---")
 
     # Prueba 1: Función válida

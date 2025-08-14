@@ -7,6 +7,11 @@ from plotter import CurvePlotter # Importa tu plotter
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        """
+        Constructor de la ventana principal de la aplicación.
+        Configura el título, tamaño inicial y todos los elementos gráficos principales.
+        Aquí se crea el área de graficado y se inicializan los controles de usuario.
+        """
         super().__init__()
         self.setWindowTitle("Gratificadora de Curvas de Nivel 2D")
         self.setGeometry(100, 100, 800, 600) # x, y, ancho, alto inicial
@@ -15,14 +20,20 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
 
-        # AHORA SÍ: Instanciar el plotter
-        self.plotter = CurvePlotter(self) # Pasa self como parent
+        # Instancia el área de graficado (plotter)
+        self.plotter = CurvePlotter(self)
 
+        # Inicializa la interfaz de usuario
         self.init_ui()
 
     # ...existing code...
 
     def on_plot_button_clicked(self):
+        """
+        Evento que se ejecuta al presionar el botón 'Graficar'.
+        Toma la función ingresada por el usuario y el valor N, los valida y dibuja la curva de nivel correspondiente.
+        Si hay errores de sintaxis o de cálculo, muestra un mensaje claro al usuario.
+        """
         func_str = self.function_input.text()
         n_value = self.n_value_input.value()
         parsed_func, error_message = parse_function(func_str)
@@ -35,6 +46,12 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error de parseo", error_message)
 
     def on_animate_button_clicked(self):
+        """
+        Evento que se ejecuta al presionar el botón 'Animar'.
+        Toma la función y parámetros de animación, valida la entrada y genera una animación de la curva de nivel.
+        Permite al usuario elegir la velocidad y si desea dejar rastro de las curvas anteriores.
+        Si ocurre algún error, se informa de forma clara.
+        """
         func_str = self.function_input.text()
         n_value = self.n_value_input.value()
         trace_enabled = self.leave_trace_checkbox.isChecked()
@@ -51,9 +68,18 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error de parseo", error_message)
 
     def on_stop_button_clicked(self):
+        """
+        Evento que se ejecuta al presionar el botón 'Detener animación'.
+        Detiene la animación actual si está activa, permitiendo al usuario pausar el proceso en cualquier momento.
+        """
         self.plotter.stop_animation()
 
     def on_export_gif_button_clicked(self):
+        """
+        Evento que se ejecuta al presionar el botón 'Exportar GIF'.
+        Guarda la animación actual como un archivo GIF en el escritorio del usuario.
+        Si no hay animación activa, informa al usuario. Si ocurre un error al guardar, lo muestra claramente.
+        """
         import os
         desktop_path = os.path.expanduser('~/Desktop/curva_animada.gif')
         if hasattr(self.plotter, 'animation') and self.plotter.animation:
@@ -66,6 +92,11 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Exportar GIF", "No hay animación activa para exportar.")
 
     def init_ui(self):
+        """
+        Inicializa todos los controles y el layout de la interfaz gráfica.
+        Aquí se crean los campos de entrada, botones y se organizan en el layout principal.
+        El usuario puede definir la función, el valor N, la velocidad de animación y otras opciones desde esta sección.
+        """
         self.controls_group_box = QGroupBox("Define tu Curva de Nivel")
         control_layout = QGridLayout()
 
